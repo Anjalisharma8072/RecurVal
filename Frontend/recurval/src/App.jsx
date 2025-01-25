@@ -4,10 +4,11 @@ import Register from "./components/auth/register/register";
 
 import Header from "./components/header/header";
 import Home from "./components/home";
-import MeetingRoom from "./components/meeting-room/meetingRoom";
 
-import { AuthProvider } from "./contexts/authContext"
+import { AuthProvider } from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
+import LobbyScreen  from "./components/meeting-room/Lobby";
+import  RoomPage from "./components/meeting-room/Room";
 
 function App() {
   const routesArray = [
@@ -25,7 +26,12 @@ function App() {
     },
     {
       path: "/meeting-room",
-      element: <MeetingRoom />,
+      element: <LobbyScreen />,
+    },
+    
+    {
+      path: "/room/:id",
+      element: <RoomPage />,
     },
   ];
   let routesElement = useRoutes(routesArray);
