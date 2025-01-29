@@ -53,16 +53,22 @@ export default function Header() {
           {userLoggedIn && (
             <div className="flex space-x-4">
               <button
-                onClick={() => handleNavigate("/score")}
+                onClick={() => handleNavigate("/jobs")}
                 className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
               >
-                Score
+                Jobs
               </button>
               <button
                 onClick={() => handleNavigate("/interview")}
                 className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
               >
                 Interview
+              </button>
+              <button
+                onClick={() => handleNavigate("/score")}
+                className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+              >
+                Score
               </button>
               <button
                 onClick={() => handleNavigate("/meeting-room")}
@@ -130,16 +136,22 @@ export default function Header() {
             {userLoggedIn && (
               <div className="flex flex-col space-y-3">
                 <button
-                  onClick={() => handleNavigate("/score")}
+                  onClick={() => handleNavigate("/jobs")}
                   className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
                 >
-                  Score
+                  Jobs
                 </button>
                 <button
                   onClick={() => handleNavigate("/interview")}
                   className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
                 >
                   Interview
+                </button>
+                <button
+                  onClick={() => handleNavigate("/score")}
+                  className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                >
+                  Score
                 </button>
                 <button
                   onClick={() => handleNavigate("/meeting-room")}

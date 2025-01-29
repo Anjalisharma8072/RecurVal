@@ -2,12 +2,38 @@ import  { useEffect, useCallback, useState } from "react";
 import ReactPlayer from "react-player";
 import peer from "../../services/peer";
 import { useSocket } from "../../contexts/socketProvider";
+import { Mic, MicOff } from "lucide-react";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
+
+
 
 const RoomPage = () => {
   const socket = useSocket();
   const [remoteSocketId, setRemoteSocketId] = useState(null);
   const [myStream, setMyStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
+  const [isMicOn, setIsMicOn] = useState(false);
+
+  const {
+    transcript,
+    // listening,
+    // resetTranscript,
+    browserSupportsSpeechRecognition,
+  } = useSpeechRecognition();
+
+  const toggleMic = () => {
+    if (!isMicOn) {
+      // Turn mic on
+      SpeechRecognition.startListening({ continuous: true });
+      setIsMicOn(true);
+    } else {
+      // Turn mic off
+      SpeechRecognition.stopListening();
+      setIsMicOn(false);
+    }
+  };
 
   const handleUserJoined = useCallback(({ email, id }) => {
     console.log(`Email ${email} joined room`);
@@ -109,10 +135,12 @@ const RoomPage = () => {
     handleNegoNeedFinal,
   ]);
 
+  if (!browserSupportsSpeechRecognition) {
+    return <div>Browser doesnt support speech recognition.</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 pt-16 pb-4">
-      {" "}
-      {/* Add pt-16 for header height */}
       <div className="w-full max-w-7xl mx-4 md:mx-8 lg:mx-12 xl:mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white/90 backdrop-blur-lg rounded-xl shadow-xl p-6 space-y-6">
           {/* Header Section */}
@@ -131,6 +159,13 @@ const RoomPage = () => {
                   Waiting for participants...
                 </span>
               )}
+            </p>
+          </div>
+
+          {/* Transcript Section */}
+          <div className="bg-gray-100 rounded-xl p-4 min-h-[150px]">
+            <p className="text-gray-700">
+              {transcript || "Your transcription will appear here..."}
             </p>
           </div>
 
@@ -173,6 +208,26 @@ const RoomPage = () => {
 
           {/* Control Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4">
+            {/* Mic Toggle Button */}
+            <button
+              onClick={toggleMic}
+              className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md ${
+                isMicOn
+                  ? "bg-green-600 hover:bg-green-700"
+                  : "bg-blue-600 hover:bg-blue-700"
+              } text-white`}
+            >
+              {isMicOn ? (
+                <div className="flex items-center">
+                  <Mic className="mr-2" /> Stop Listening
+                </div>
+              ) : (
+                <div className="flex items-center">
+                  <MicOff className="mr-2" /> Start Listening
+                </div>
+              )}
+            </button>
+
             {remoteSocketId && (
               <button
                 onClick={handleCallUser}
