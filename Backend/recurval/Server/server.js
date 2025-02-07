@@ -36,6 +36,24 @@ io.on("connection", (socket) => {
     io.to(socket.id).emit("room:join", data);
   });
 
+  // Message sending logic
+  socket.on("message:send", ({ room, message, email }) => {
+    console.log(`Message from ${email} in ${room}: ${message}`);
+
+    // Broadcast message to all clients in the room
+    io.to(room).emit("message:receive", { email, message });
+  });
+
+  // Handle disconnection
+  socket.on("disconnect", () => {
+    console.log(`User Disconnected: ${socket.id}`);
+    const email = socketidToEmailMap.get(socket.id);
+    if (email) {
+      emailToSocketIdMap.delete(email);
+      socketidToEmailMap.delete(socket.id);
+    }
+  });
+
   socket.on("user:call", ({ to, offer }) => {
     io.to(to).emit("incomming:call", { from: socket.id, offer });
   });
