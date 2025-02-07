@@ -9,7 +9,6 @@ import { AuthProvider } from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
 import LobbyScreen  from "./components/meeting-room/Lobby";
 import  RoomPage from "./components/meeting-room/Room";
-import Dictaphone from "./components/meeting-room/mic";
 import JobListings from "./components/candidate/jobsListing";
 
 function App() {
@@ -35,10 +34,7 @@ function App() {
       path: "/room/:id",
       element: <RoomPage />,
     },
-    {
-      path: "/mic",
-      element: <Dictaphone />,
-    },
+   
     {
       path: "/profile",
       element: <CandidateProfile />,
