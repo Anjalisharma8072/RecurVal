@@ -23,9 +23,9 @@ const Register = () => {
 
   return (
     <>
-      {userLoggedIn && <Navigate to={"/home"} replace={true} />}
+      {userLoggedIn && <Navigate to={"/jobs"} replace={true} />}
 
-      <main className="w-full h-screen flex items-center justify-center ml-80 mt-24">
+      <main className="w-full h-screen flex items-center justify-center ml-70 mt-24">
         <div className="w-96 text-gray-600 space-y-5 p-4 shadow-xl border rounded-xl">
           <div className="text-center mb-6">
             <h3 className="text-gray-800 text-xl font-semibold sm:text-2xl">
@@ -81,16 +81,6 @@ const Register = () => {
               />
             </div>
 
-            <div>
-              <label className="text-sm text-gray-600 font-bold">Role</label>
-              <select className="w-full mt-2 px-3 py-2 text-gray-500 bg-transparent outline-none border focus:border-indigo-600 shadow-sm rounded-lg transition duration-300">
-                <option value="" disabled selected hidden>
-                  Select a role
-                </option>
-                <option value="Interviewer">Interviewer</option>
-                <option value="Candidate">Candidate</option>
-              </select>
-            </div>
 
             <button
               type="submit"

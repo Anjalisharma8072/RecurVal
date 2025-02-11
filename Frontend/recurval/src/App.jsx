@@ -10,11 +10,11 @@ import { useRoutes } from "react-router-dom";
 import LobbyScreen  from "./components/meeting-room/Lobby";
 import  RoomPage from "./components/meeting-room/Room";
 import JobListings from "./components/candidate/jobsListing";
-
+import JobPortal from "./components/admin/jobposting";
 function App() {
   const routesArray = [
     {
-      path: "/login",
+      path: "/",
       element: <Login />,
     },
     {
@@ -42,6 +42,10 @@ function App() {
     {
       path:"/jobs",
       element: <JobListings />,
+    },
+    {
+      path:"/post-job",
+      element: <JobPortal />,
     }
     
   ];

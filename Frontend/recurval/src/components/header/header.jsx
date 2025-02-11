@@ -15,7 +15,7 @@ export default function Header() {
       await doSignOut();
       setIsProfileDropdownOpen(false);
       setIsMobileMenuOpen(false);
-      navigate("/login");
+      navigate("/");
     } catch (error) {
       console.error("Logout failed", error);
     }
@@ -115,7 +115,7 @@ export default function Header() {
               <div className="space-x-4">
                 <button
                   className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-300"
-                  onClick={() => navigate("/login")}
+                  onClick={() => navigate("/")}
                 >
                   Sign In
                 </button>
@@ -183,7 +183,7 @@ export default function Header() {
                 <div className="flex flex-col space-y-3">
                   <button
                     className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-300"
-                    onClick={() => navigate("/login")}
+                    onClick={() => navigate("/")}
                   >
                     Sign In
                   </button>
