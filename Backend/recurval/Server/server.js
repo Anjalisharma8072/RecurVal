@@ -6,6 +6,7 @@ const routes = require("../routes/routes");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const db = process.env.MONGO_URI;
+const jobDetails = require("../model/job")
 require("dotenv").config();
 
 const app = express();
@@ -99,6 +100,26 @@ app.use("/api", routes);
 app.get("/", (req, res) => {
   res.send("Server is running");
 });
+
+app.post("/api/job-post",async (req,res)=>{
+  try{
+    const job = new jobDetails(req.body);
+    console.log(job);
+    await job.save();
+    res.status(201).json(job);
+  }catch(error){
+    res.status(400).json({error:error.message});
+  }
+
+})
+app.get("/api/job-list",async (req,res)=>{
+  try{
+    const jobs = await jobDetails.find();
+    res.status(200).json(jobs);
+  }catch(error){
+    res.status(400).json({error:error.message});
+  }
+})
 
 app.post("/evaluate", async (req, res) => {
   const { messages } = req.body;
