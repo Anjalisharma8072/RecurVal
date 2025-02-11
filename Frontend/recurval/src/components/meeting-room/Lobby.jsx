@@ -22,9 +22,9 @@ const LobbyScreen = () => {
   const handleJoinRoom = useCallback(
     (data) => {
       const { room } = data;
-      navigate(`/room/${room}`);
+      navigate(`/room/${room}`, { state: { email, room } });
     },
-    [navigate]
+    [email,navigate]
   );
 
   useEffect(() => {

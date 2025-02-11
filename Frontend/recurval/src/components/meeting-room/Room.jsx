@@ -1,4 +1,4 @@
-import  { useEffect, useCallback, useState } from "react";
+import  { useEffect, useCallback, useState,useRef } from "react";
 import ReactPlayer from "react-player";
 import peer from "../../services/peer";
 import { useSocket } from "../../contexts/socketProvider";
@@ -6,35 +6,89 @@ import { Mic, MicOff } from "lucide-react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
+import { useLocation, useNavigate } from "react-router-dom";
 
 
 
 const RoomPage = () => {
   const socket = useSocket();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { email, room } = location.state || {}; 
   const [remoteSocketId, setRemoteSocketId] = useState(null);
   const [myStream, setMyStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
   const [isMicOn, setIsMicOn] = useState(false);
+  // const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [accumulatedTranscript, setAccumulatedTranscript] = useState("");
+  const [evaluationResult, setEvaluationResult] = useState(null);
+  const previousTranscriptRef =  useRef("");
+
 
   const {
     transcript,
-    // listening,
-    // resetTranscript,
+    resetTranscript,
     browserSupportsSpeechRecognition,
   } = useSpeechRecognition();
 
   const toggleMic = () => {
     if (!isMicOn) {
-      // Turn mic on
       SpeechRecognition.startListening({ continuous: true });
       setIsMicOn(true);
     } else {
-      // Turn mic off
-      SpeechRecognition.stopListening();
+      SpeechRecognition.stopListening();  
       setIsMicOn(false);
+      if(accumulatedTranscript) {
+      socket.emit("message:send",{room, message:accumulatedTranscript, email});
+      setAccumulatedTranscript("");
+      }
+      resetTranscript();
+      previousTranscriptRef.current="";
     }
   };
 
+  const handleEndMeeting =async ()=>{
+    console.log("Meeting Ended");
+    messages.forEach((msg) => {
+      console.log(`${msg.email}: ${msg.content}`);
+    });
+    // Stop media streams
+    if (myStream) {
+      myStream.getTracks().forEach((track) => track.stop());
+    }
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+    }
+
+    // Disconnect socket
+    socket.disconnect();
+
+    const evaulation = await evaluateCandidate(messages);
+    setEvaluationResult(evaulation);
+
+    // Redirect to meeting entry URL
+    navigate("/meeting-room");
+  }
+
+  const evaluateCandidate = async(messages)=>{
+    try{
+      const response = await fetch("http://localhost:8000/evaluate",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({messages})
+      });
+      const result = await response.json();
+      console.log("AI Responsee:", JSON.stringify(result, null, 2));
+      return result;
+    }catch(error){
+      console.error("Error:", error);
+      return null;
+    }
+  }
+  
   const handleUserJoined = useCallback(({ email, id }) => {
     console.log(`Email ${email} joined room`);
     setRemoteSocketId(id);
@@ -135,6 +189,40 @@ const RoomPage = () => {
     handleNegoNeedFinal,
   ]);
 
+     useEffect(() => {
+       if (room && email) {
+         console.log(`Joining room: ${room} as ${email}`);
+         socket.emit("join-room", { room, email });
+       }
+
+       const handleMessageReceive = ({ email, message }) => {
+         console.log(`Received message from ${email}: ${message}`); 
+         setMessages((prev) => [...prev, { email, content: message }]);
+       };
+
+       socket.on("message:receive", handleMessageReceive);
+
+       return () => {
+         socket.off("message:receive", handleMessageReceive);
+       };
+     }, [room, email]);
+
+     useEffect(() => {
+       if (transcript) {
+         const newTranscript = transcript.replace(previousTranscriptRef.current, "").trim();
+          setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
+          previousTranscriptRef.current = transcript;
+       }
+     }, [transcript]);
+
+    //  const sendMessage = () => {
+    //    if (message.trim()) {
+    //      console.log(`Sending message: ${message} to room: ${room}`); 
+    //      socket.emit("message:send", { room, message:transcript, email });
+    //      setMessage(""); 
+    //    }
+    //  };
+
   if (!browserSupportsSpeechRecognition) {
     return <div>Browser doesnt support speech recognition.</div>;
   }
@@ -143,7 +231,6 @@ const RoomPage = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 pt-16 pb-4">
       <div className="w-full max-w-7xl mx-4 md:mx-8 lg:mx-12 xl:mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white/90 backdrop-blur-lg rounded-xl shadow-xl p-6 space-y-6">
-          {/* Header Section */}
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold text-gray-800">
               Video Conference
@@ -205,7 +292,23 @@ const RoomPage = () => {
               </div>
             )}
           </div>
-
+          <div>
+            <h1>Chat Room: {room}</h1>
+            <div className="chat-box">
+              {messages.map((msg, idx) => (
+                <p key={idx}>
+                  <strong>{msg.email}:</strong> {msg.content}
+                </p>
+              ))}
+            </div>
+            {/* <input
+              type="text"
+              value={transcript}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder="Type a message..."
+            />
+            <button onClick={sendMessage}>Send</button> */}
+          </div>
           {/* Control Buttons */}
           <div className="flex flex-col sm:flex-row justify-center gap-4">
             {/* Mic Toggle Button */}
@@ -245,7 +348,23 @@ const RoomPage = () => {
                 Share Screen
               </button>
             )}
+            <button
+              onClick={handleEndMeeting}
+              className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md"
+            >
+              End Meeting
+            </button>
           </div>
+          {evaluationResult && (
+            <div className="bg-white rounded-xl shadow-xl p-6 mt-6">
+              <h2 className="text-2xl font-bold text-gray-800">
+                Evaluation Result
+              </h2>
+              <pre className="text-gray-700 mt-4">
+                {JSON.stringify(evaluationResult, null, 2)}
+              </pre>
+            </div>
+          )}
         </div>
       </div>
     </div>
