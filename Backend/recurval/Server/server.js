@@ -7,6 +7,7 @@ const { Server } = require("socket.io");
 const cors = require("cors");
 const db = process.env.MONGO_URI;
 const jobDetails = require("../model/job")
+const Scorecard = require("../model/ScoreCard")
 require("dotenv").config();
 
 const app = express();
@@ -121,6 +122,23 @@ app.get("/api/job-list",async (req,res)=>{
   }
 })
 
+app.patch("/api/job-update/:jobId",async(req,res)=>{
+  try{
+    const {jobId} = req.params;
+    console.log( "*******",jobId);
+    const updates = req.body;
+    const updatedJob = await jobDetails.findByIdAndUpdate(jobId,updates,{
+      new:true,
+      runValidators:true,
+    });
+    if(!updatedJob){
+      return res.status(404),json({error:"Job not found"});
+    }
+    res.status(200).json(updatedJob);
+  }catch(error){
+    res.status(400).json({error:error.message});
+  }
+})
 app.post("/evaluate", async (req, res) => {
   const { messages } = req.body;
 
@@ -153,16 +171,16 @@ Strictly output only JSON. No extra explanations.`,
   };
 
   const fullMessages = [
-    systemPrompt, 
+    systemPrompt,
     ...messages.map((msg) => ({
       role: "user",
       content: `${msg.email}: ${msg.content}`,
     })),
   ];
 
-  console.log("Full Messages:", JSON.stringify(fullMessages, null, 2));
 
   try {
+    // Step 1: Call the AI API for evaluation
     const response = await fetch(
       "https://openrouter.ai/api/v1/chat/completions",
       {
@@ -185,13 +203,36 @@ Strictly output only JSON. No extra explanations.`,
       return res.status(500).json({ error: result.error });
     }
 
-    return res.json(result);
+    // Step 2: Extract the content from the AI response
+    const aiContent = result.choices[0].message.content;
+
+    // Step 3: Remove Markdown code block syntax (if present)
+    const cleanContent = aiContent
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
+
+    // Step 4: Parse the cleaned content as JSON
+    const content = JSON.parse(cleanContent);
+    const { evaluations, final_decision } = content;
+
+    // Step 5: Save all evaluations and final_decision as a single document
+    const scorecard = new Scorecard({
+      evaluations,
+      final_decision,
+    });
+
+    await scorecard.save();
+
+    // Step 6: Return the AI response to the client
+    return res.json(content);
   } catch (error) {
     console.error("Error:", error);
-    return res.status(500).json({ error: "Failed to evaluate responses" });
+    return res
+      .status(500)
+      .json({ error: "Failed to evaluate and save responses" });
   }
 });
-
 
 
 // Start the server
