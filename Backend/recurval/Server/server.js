@@ -5,9 +5,13 @@ const http = require("http"); // Add this
 const routes = require("../routes/routes");
 const { Server } = require("socket.io");
 const cors = require("cors");
+const nodemailer = require("nodemailer");
+const {PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const db = process.env.MONGO_URI;
 const jobDetails = require("../model/job")
 const Scorecard = require("../model/ScoreCard")
+const fs = require("fs");
+const path = require("path");
 require("dotenv").config();
 
 const app = express();
@@ -28,6 +32,7 @@ const io = new Server(server, {
 
 const emailToSocketIdMap = new Map();
 const socketidToEmailMap = new Map();
+const roomInitiators = new Map(); // Track initiators per room
 
 io.on("connection", (socket) => {
   console.log(`Socket Connected`, socket.id);
@@ -40,6 +45,7 @@ io.on("connection", (socket) => {
     socket.join(room);
     io.to(socket.id).emit("room:join", data);
   });
+
 
 
   socket.on("message:send", ({ room, message, email }) => {
@@ -60,10 +66,29 @@ io.on("connection", (socket) => {
       emailToSocketIdMap.delete(email);
       socketidToEmailMap.delete(socket.id);
     }
+    // Check if this user was the call initiator
+    let roomToClose = null;
+    for (let [room, initiator] of roomInitiators.entries()) {
+      if (initiator === socket.id) {
+        roomToClose = room;
+        break;
+      }
+    }
+      if (roomToClose) {
+        io.to(roomToClose).emit("call:ended", {
+          message: "Call ended as the host left.",
+        });
+        io.in(roomToClose).socketsLeave(roomToClose); // Disconnect all users
+        roomInitiators.delete(roomToClose); // Remove the room tracking
+      }
   });
 
-  socket.on("user:call", ({ to, offer }) => {
+  socket.on("user:call", ({ to, offer ,room}) => {
     io.to(to).emit("incomming:call", { from: socket.id, offer });
+    // Store initiator of the call for that room
+    if (!roomInitiators.has(room)) {
+      roomInitiators.set(room, socket.id);
+    }
   });
 
   socket.on("call:accepted", ({ to, ans }) => {
@@ -94,6 +119,132 @@ mongoose
 // Express Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+let candidateEmail = "anjalihai123@gmail.com"
+
+// Generate PDF
+async function createPDF(evaluations, finalDecision, candidateEmail) {
+  const pdfDoc = await PDFDocument.create();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontSize = 12;
+  const margin = 50;
+  const lineHeight = fontSize + 5;
+  const pageWidth = 600; // Adjust as needed
+
+  let page = pdfDoc.addPage([pageWidth, 800]); // Set page size
+  let y = page.getHeight() - margin;
+
+  function addText(text, x, y, maxWidth) {
+    const words = text.split(" ");
+    let line = "";
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + " ";
+      const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+      if (textWidth > maxWidth) {
+        page.drawText(line, {
+          x,
+          y,
+          size: fontSize,
+          font,
+          color: rgb(0, 0, 0),
+        });
+        y -= lineHeight;
+        line = words[i] + " ";
+      } else {
+        line = testLine;
+      }
+    }
+    if (line) {
+      page.drawText(line, { x, y, size: fontSize, font, color: rgb(0, 0, 0) });
+      y -= lineHeight;
+    }
+    return y;
+  }
+
+  // Add title
+  y = addText("Candidate Evaluation Report", margin, y, pageWidth - 2 * margin);
+  y -= 10;
+
+  evaluations.forEach((evaluation, index) => {
+    if (y < margin) {
+      page = pdfDoc.addPage([pageWidth, 800]);
+      y = page.getHeight() - margin;
+    }
+
+    y = addText(
+      `Question ${index + 1}: ${evaluation.question}`,
+      margin,
+      y,
+      pageWidth - 2 * margin
+    );
+    y = addText(
+      `Answer: ${evaluation.answer}`,
+      margin,
+      y,
+      pageWidth - 2 * margin
+    );
+    y = addText(
+      `Score: ${evaluation.score}/10`,
+      margin,
+      y,
+      pageWidth - 2 * margin
+    );
+    y = addText(
+      `Areas of Improvement: ${evaluation.areas_of_improvement}`,
+      margin,
+      y,
+      pageWidth - 2 * margin
+    );
+    y -= 10; // Extra spacing between questions
+  });
+
+  if (y < margin) {
+    page = pdfDoc.addPage([pageWidth, 800]);
+    y = page.getHeight() - margin;
+  }
+
+  // Add final decision
+  y = addText(
+    `Final Decision: ${finalDecision}`,
+    margin,
+    y,
+    pageWidth - 2 * margin
+  );
+
+  // Save PDF
+  const pdfBytes = await pdfDoc.save();
+  const filePath = path.join(__dirname, `${candidateEmail}_evaluation.pdf`);
+  fs.writeFileSync(filePath, pdfBytes);
+  return filePath;
+}
+// Send email with PDF attachment
+async function sendEmailWithPDF(email, pdfPath) {
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER, // Your email
+      pass: process.env.EMAIL_PASSWORD, // Your email password
+    },
+    
+  });
+  console.log("Email User:", process.env.EMAIL_USER);
+  console.log("Email Password:", process.env.EMAIL_PASSWORD);
+
+  const mailOptions = {
+    from: process.env.EMAIL_USER,
+    to: email,
+    subject: "Your Interview Evaluation",
+    text: "Please find your interview evaluation attached.",
+    attachments: [
+      {
+        filename: "evaluation.pdf",
+        path: pdfPath,
+      },
+    ],
+  };
+
+  await transporter.sendMail(mailOptions);
+}
 
 // Routes
 app.use("/api", routes);
@@ -139,8 +290,12 @@ app.patch("/api/job-update/:jobId",async(req,res)=>{
     res.status(400).json({error:error.message});
   }
 })
+
+
 app.post("/evaluate", async (req, res) => {
-  const { messages } = req.body;
+  const { messages} = req.body;
+  // let candidateEmail = "anjalihai123@gmail.com"
+  // console.log(candidateEmail)
 
   // System instruction should be an object
   const systemPrompt = {
@@ -178,61 +333,73 @@ Strictly output only JSON. No extra explanations.`,
     })),
   ];
 
+  
+
+   try {
+     // Step 1: Call the AI API for evaluation
+     const response = await fetch(
+       "https://openrouter.ai/api/v1/chat/completions",
+       {
+         method: "POST",
+         headers: {
+           Authorization: `Bearer ${process.env.OpenAI_API_KEY}`,
+           "Content-Type": "application/json",
+         },
+         body: JSON.stringify({
+           model: "meta-llama/llama-3.3-70b-instruct:free",
+           messages: fullMessages,
+         }),
+       }
+     );
+
+     const result = await response.json();
+     if (result.error) {
+       return res.status(500).json({ error: result.error });
+     }
+
+     // Step 2: Extract AI response
+     const aiContent = result.choices[0].message.content;
+
+     // Step 3: Clean AI response (remove extra markdown)
+     const cleanContent = aiContent
+       .replace(/```json/g, "")
+       .replace(/```/g, "")
+       .trim();
+
+     // Step 4: Parse response as JSON
+     const content = JSON.parse(cleanContent);
+     return res.json(content); // ✅ Only return JSON, no email sending
+   } catch (error) {
+     console.error("Error:", error);
+     return res.status(500).json({ error: "Failed to evaluate candidate." });
+   }
+});
+
+app.post("/send-report", async (req, res) => {
+  const { candidateEmail, evaluations, final_decision } = req.body;
 
   try {
-    // Step 1: Call the AI API for evaluation
-    const response = await fetch(
-      "https://openrouter.ai/api/v1/chat/completions",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.OpenAI_API_KEY}`, // Use ENV variable
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "meta-llama/llama-3.3-70b-instruct:free",
-          messages: fullMessages,
-        }),
-      }
-    );
-
-    const result = await response.json();
-    console.log("AI Response:", JSON.stringify(result, null, 2));
-
-    if (result.error) {
-      return res.status(500).json({ error: result.error });
+    if (!candidateEmail || !evaluations || !final_decision) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
-    // Step 2: Extract the content from the AI response
-    const aiContent = result.choices[0].message.content;
-
-    // Step 3: Remove Markdown code block syntax (if present)
-    const cleanContent = aiContent
-      .replace(/```json/g, "")
-      .replace(/```/g, "")
-      .trim();
-
-    // Step 4: Parse the cleaned content as JSON
-    const content = JSON.parse(cleanContent);
-    const { evaluations, final_decision } = content;
-
-    // Step 5: Save all evaluations and final_decision as a single document
-    const scorecard = new Scorecard({
+    // Step 1: Generate PDF
+    const pdfPath = await createPDF(
       evaluations,
       final_decision,
-    });
+      candidateEmail
+    );
 
-    await scorecard.save();
+    // Step 2: Send email with the PDF
+    await sendEmailWithPDF(candidateEmail, pdfPath);
 
-    // Step 6: Return the AI response to the client
-    return res.json(content);
+    return res.json({ message: "Evaluation report sent successfully." });
   } catch (error) {
     console.error("Error:", error);
-    return res
-      .status(500)
-      .json({ error: "Failed to evaluate and save responses" });
+    return res.status(500).json({ error: "Failed to send report." });
   }
 });
+
 
 
 // Start the server
