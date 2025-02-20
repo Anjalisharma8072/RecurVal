@@ -49,7 +49,7 @@ const Login = () => {
 
   return (
     <div>
-      {userLoggedIn && <Navigate to={"/jobs"} replace={true} />}
+      {userLoggedIn && <Navigate to={"/meeting-room"} replace={true} />}
 
       <main className="w-full h-screen flex items-center justify-center ml-70 mt-6">
         <div className="w-96 text-gray-600 space-y-5 p-4 shadow-xl border rounded-xl">

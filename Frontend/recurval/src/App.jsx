@@ -11,10 +11,16 @@ import LobbyScreen  from "./components/meeting-room/Lobby";
 import  RoomPage from "./components/meeting-room/Room";
 import JobListings from "./components/candidate/jobsListing";
 import JobPortal from "./components/admin/jobposting";
+import ScorePage from "./components/admin/ScorePage";
+
 function App() {
   const routesArray = [
     {
       path: "/",
+      element: <Home />,
+    },
+    {
+      path: "/login",
       element: <Login />,
     },
     {
@@ -34,20 +40,23 @@ function App() {
       path: "/room/:id",
       element: <RoomPage />,
     },
-   
+
     {
       path: "/profile",
       element: <CandidateProfile />,
     },
     {
-      path:"/jobs",
+      path: "/jobs",
       element: <JobListings />,
     },
     {
-      path:"/post-job",
+      path: "/post-job",
       element: <JobPortal />,
+    },
+    {
+      path:"/score",
+      element:<ScorePage/>
     }
-    
   ];
   let routesElement = useRoutes(routesArray);
   return (

@@ -1,14 +1,19 @@
 import { useAuth } from "../../contexts/authContext";
 import { doSignOut } from "../../firebase/auth";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 
 export default function Header() {
   const navigate = useNavigate();
-  const { userLoggedIn } = useAuth();
+  const { currentUser } = useAuth();
   const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setIsAdmin(currentUser?.email === "admin@gmail.com");
+  }, [currentUser]);
 
   const handleLogout = async () => {
     try {
@@ -50,38 +55,63 @@ export default function Header() {
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-6">
-          {userLoggedIn && (
+          {currentUser && (
             <div className="flex space-x-4">
-              <button
-                onClick={() => handleNavigate("/jobs")}
-                className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-              >
-                Jobs
-              </button>
-              <button
-                onClick={() => handleNavigate("/interview")}
-                className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-              >
-                Interview
-              </button>
-              <button
-                onClick={() => handleNavigate("/score")}
-                className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-              >
-                Score
-              </button>
-              <button
-                onClick={() => handleNavigate("/meeting-room")}
-                className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-              >
-                Meeting Room
-              </button>
+              {isAdmin ? (
+                <>
+                  <button
+                    onClick={() => handleNavigate("/post-job")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Jobs
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/interview")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Interview
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/meeting-room")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Meeting Room
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    onClick={() => handleNavigate("/jobs")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Jobs
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/interview")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Interview
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/score")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Score
+                  </button>
+                  <button
+                    onClick={() => handleNavigate("/meeting-room")}
+                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                  >
+                    Meeting Room
+                  </button>
+                </>
+              )}
             </div>
           )}
 
           {/* Profile/Auth Section */}
           <div className="relative">
-            {userLoggedIn ? (
+            {currentUser ? (
               <div>
                 <button
                   onClick={() => setIsProfileDropdownOpen((prev) => !prev)}
@@ -115,7 +145,7 @@ export default function Header() {
               <div className="space-x-4">
                 <button
                   className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-300"
-                  onClick={() => navigate("/")}
+                  onClick={() => navigate("/login")}
                 >
                   Sign In
                 </button>
@@ -133,38 +163,63 @@ export default function Header() {
         {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="md:hidden absolute top-full left-0 w-full bg-gray-800 pt-4 pb-6 px-4">
-            {userLoggedIn && (
+            {currentUser && (
               <div className="flex flex-col space-y-3">
-                <button
-                  onClick={() => handleNavigate("/jobs")}
-                  className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                >
-                  Jobs
-                </button>
-                <button
-                  onClick={() => handleNavigate("/interview")}
-                  className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                >
-                  Interview
-                </button>
-                <button
-                  onClick={() => handleNavigate("/score")}
-                  className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                >
-                  Score
-                </button>
-                <button
-                  onClick={() => handleNavigate("/meeting-room")}
-                  className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                >
-                  Meeting Room
-                </button>
+                {isAdmin ? (
+                  <>
+                    <button
+                      onClick={() => handleNavigate("/post-job")}
+                      className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Jobs
+                    </button>
+                    <button
+                      onClick={() => handleNavigate("/interview")}
+                      className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Interview
+                    </button>
+                    <button
+                      onClick={() => handleNavigate("/meeting-room")}
+                      className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Meeting Room
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => handleNavigate("/jobs")}
+                      className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Jobs
+                    </button>
+                    <button
+                      onClick={() => handleNavigate("/interview")}
+                      className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Interview
+                    </button>
+                    <button
+                      onClick={() => handleNavigate("/score")}
+                      className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Score
+                    </button>
+                    <button
+                      onClick={() => handleNavigate("/meeting-room")}
+                      className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
+                    >
+                      Meeting Room
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
             {/* Mobile Profile/Auth Section */}
             <div className="mt-4">
-              {userLoggedIn ? (
+              {currentUser ? (
                 <div className="space-y-3">
                   <button
                     onClick={() => handleNavigate("/profile")}
@@ -183,7 +238,7 @@ export default function Header() {
                 <div className="flex flex-col space-y-3">
                   <button
                     className="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-md transition duration-300"
-                    onClick={() => navigate("/")}
+                    onClick={() => navigate("/login")}
                   >
                     Sign In
                   </button>

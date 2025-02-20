@@ -7,6 +7,7 @@ import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
 import { useLocation, useNavigate } from "react-router-dom";
+import debounce from "lodash/debounce";
 
 
 
@@ -61,14 +62,16 @@ const RoomPage = () => {
       remoteStream.getTracks().forEach((track) => track.stop());
     }
 
-    // Disconnect socket
-    socket.disconnect();
+    socket.emit("meeting:end",{room});
+
 
     const evaulation = await evaluateCandidate(messages);
     setEvaluationResult(evaulation);
 
     // Redirect to meeting entry URL
-    navigate("/meeting-room");
+     navigate("/score", {
+       state: { evaluationResult: evaulation, candidateEmail: email },
+     });
   }
 
   const evaluateCandidate = async(messages)=>{
@@ -207,13 +210,24 @@ const RoomPage = () => {
        };
      }, [room, email]);
 
-     useEffect(() => {
-       if (transcript) {
-         const newTranscript = transcript.replace(previousTranscriptRef.current, "").trim();
-          setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
-          previousTranscriptRef.current = transcript;
-       }
-     }, [transcript]);
+     const debouncedTranscriptUpdate = useCallback(
+       debounce((newTranscript) => {
+         setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
+         previousTranscriptRef.current = transcript;
+       }, 500),
+       []
+     );
+
+      useEffect(() => {
+        if (transcript) {
+          const newTranscript = transcript
+            .replace(previousTranscriptRef.current, "")
+            .trim();
+          if (newTranscript) {
+            debouncedTranscriptUpdate(newTranscript);
+          }
+        }
+      }, [transcript, debouncedTranscriptUpdate]);
 
     //  const sendMessage = () => {
     //    if (message.trim()) {
@@ -222,6 +236,8 @@ const RoomPage = () => {
     //      setMessage(""); 
     //    }
     //  };
+
+    
 
   if (!browserSupportsSpeechRecognition) {
     return <div>Browser doesnt support speech recognition.</div>;

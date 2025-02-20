@@ -9,8 +9,9 @@ import {
   Trash,
   Building,
 } from "lucide-react";
+import PropTypes from "prop-types";
 
-const JobPortal = () => {
+const JobPortal = ({ jobId }) => {
   const [activeTab, setActiveTab] = useState("post");
   const [jobs, setJobs] = useState([]);
   const [applications, setApplications] = useState([]);
@@ -23,10 +24,10 @@ const JobPortal = () => {
     requirements: [""],
     techStack: [""],
   });
-
+  const [editingJobId, setEditingJobId] = useState(null);
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData({...formData,[name]:value});
+    setFormData({ ...formData, [name]: value });
   };
 
   const handleArrayInputChange = (index, field, value) => {
@@ -51,7 +52,7 @@ const JobPortal = () => {
     }));
   };
 
-  const handleSubmit = async(e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const newJob = {
       ...formData,
@@ -60,35 +61,89 @@ const JobPortal = () => {
     };
     // setJobs((prev) => [...prev, newJob]);
     setShowForm(false);
-    try{
-        const response = await fetch("http://localhost:8000/api/job-post",{
-          method:"POST",
-          headers:{"Content-Type":"application/json"},
-          body:JSON.stringify(newJob),
-        })
-        const result = await response.json();
-        console.log("resulttt",result)
-    }catch(error){
-        console.log("error",error)
+    try {
+      const response = await fetch("http://localhost:8000/api/job-post", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newJob),
+      });
+      const result = await response.json();
+      console.log("resulttt", result);
+    } catch (error) {
+      console.log("error", error);
     }
   };
-  useEffect(()=>{
-    const getjobs = async()=>{
-      try{
-        const response = await fetch("http://localhost:8000/api/job-list",{
-          method:"GET",
-          headers:{"Content-Type":"application/json"},
-        })
-        const data = await response.json();
-        console.log("data",data);
-        
-        setJobs(data)
-      }catch(error){
-        console.log("error",error)
-      }
+
+  const handleUpdate = async () => {
+    const newJob = {
+      ...formData,
+      requirements: formData.requirements.filter(Boolean),
+      techStack: formData.techStack.filter(Boolean),
+    };
+
+    try {
+      const response = await fetch(
+        `http://localhost:8000/api/job-update/${jobId}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(newJob),
+        }
+      );
+      const result = await response.json();
+      console.log("job-update", result);
+      setJobs((prev) =>
+        prev.map((job) => (job._id === editingJobId ? result : job))
+      );
+    } catch (error) {
+      console.log("error", error);
     }
-    getjobs()
-  },[])
+
+    setShowForm(false);
+    setEditingJobId(null);
+    setFormData({
+      role: "",
+      company: "",
+      location: "",
+      salary: "",
+      requirements: [""],
+      techStack: [""],
+    });
+  };
+  const handleEdit = (job) => {
+    setFormData({
+      role: job.role,
+      company: job.company,
+      location: job.location,
+      salary: job.salary,
+      requirements: job.requirements,
+      techStack: job.techStack,
+    });
+    setEditingJobId(job._id);
+    setShowForm(true);
+  };
+
+  useEffect(() => {
+    const getjobs = async () => {
+      try {
+        const response = await fetch("http://localhost:8000/api/job-list", {
+          method: "GET",
+          headers: { "Content-Type": "application/json" },
+        });
+        const data = await response.json();
+        console.log("data", data);
+
+        setJobs(data);
+      } catch (error) {
+        console.log("error", error);
+      }
+    };
+    getjobs();
+  }, []);
+
+  JobPortal.propTypes = {
+    jobId: PropTypes.string,
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 mt-16">
@@ -148,7 +203,7 @@ const JobPortal = () => {
                 <h2 className="text-xl font-bold text-gray-900 mb-4">
                   Post New Job
                 </h2>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={editingJobId ? handleUpdate : handleSubmit} className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700">
@@ -310,7 +365,10 @@ const JobPortal = () => {
                       </p>
                     </div>
                     <div className="flex gap-2">
-                      <button className="text-blue-600 hover:text-blue-700">
+                      <button
+                        className="text-blue-600 hover:text-blue-700"
+                        onClick={() => handleEdit(job)}
+                      >
                         <PenSquare className="w-5 h-5" />
                       </button>
                       <button className="text-red-600 hover:text-red-700">
@@ -324,7 +382,7 @@ const JobPortal = () => {
                       <MapPin className="w-4 h-4 mr-2" />
                       {job.location}
                     </div>
-                    
+
                     <div className="flex items-center text-gray-600">
                       <DollarSign className="w-4 h-4 mr-2" />
                       {job.salary}
