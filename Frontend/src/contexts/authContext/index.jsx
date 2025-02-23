@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from "react";
-import { auth } from "../../firebase/firebase"; // Ensure auth is correctly initialized
+import { auth } from "@/firebase/firebase"; // Ensure auth is correctly initialized
 import { onAuthStateChanged, GoogleAuthProvider } from "firebase/auth";
 import PropTypes from "prop-types";
 const AuthContext = React.createContext();
