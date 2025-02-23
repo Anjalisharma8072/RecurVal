@@ -1,6 +1,6 @@
 import  { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSocket } from "../../contexts/SocketProvider";
+import { useSocket } from "@/contexts/socketProvider";
 import { Camera, UserRoundCheck, ArrowRight } from "lucide-react";
 
 const LobbyScreen = () => {
