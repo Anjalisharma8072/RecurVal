@@ -2,18 +2,18 @@ const express = require("express");
 const mongoose = require("mongoose");
 require("dotenv").config();
 const http = require("http"); // Add this
-const routes = require("../routes/routes");
+const routes = require("./routes/routes");
 const { Server } = require("socket.io");
 const cors = require("cors");
 const nodemailer = require("nodemailer");
 const {PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const db = process.env.MONGO_URI;
-const jobDetails = require("../model/job")
-const Scorecard = require("../model/ScoreCard")
-const Candidate = require("../model/candidate")
+const jobDetails = require("./model/job")
+const Scorecard = require("./model/ScoreCard")
+const Candidate = require("./model/candidate")
 const fs = require("fs");
 const path = require("path");
-const job = require("../model/job");
+const job = require("./model/job");
 require("dotenv").config();
 
 const app = express();
