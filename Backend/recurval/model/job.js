@@ -25,6 +25,9 @@ const jobDetailsSchema = new mongoose.Schema({
     type: [String],
     required: true,
   },
+  candidate: [
+    { type: mongoose.Schema.Types.ObjectId, ref: "CandidateDetails" },
+  ],
 });
 
 module.exports = mongoose.model("JobDetails", jobDetailsSchema);

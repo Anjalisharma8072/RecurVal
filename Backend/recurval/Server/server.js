@@ -10,12 +10,14 @@ const {PDFDocument, StandardFonts, rgb } = require("pdf-lib");
 const db = process.env.MONGO_URI;
 const jobDetails = require("../model/job")
 const Scorecard = require("../model/ScoreCard")
+const Candidate = require("../model/candidate")
 const fs = require("fs");
 const path = require("path");
+const job = require("../model/job");
 require("dotenv").config();
 
 const app = express();
-const PORT = 8000;
+const PORT = 8080;
 app.use(cors()); 
 
 // Create an HTTP server and attach Express to it
@@ -32,63 +34,90 @@ const io = new Server(server, {
 
 const emailToSocketIdMap = new Map();
 const socketidToEmailMap = new Map();
-const roomInitiators = new Map(); // Track initiators per room
+const roomHosts = new Map(); 
+const socketToRoomMap = new Map(); 
 
 io.on("connection", (socket) => {
   console.log(`Socket Connected`, socket.id);
 
   socket.on("room:join", (data) => {
     const { email, room } = data;
+
+    // Store mappings
     emailToSocketIdMap.set(email, socket.id);
     socketidToEmailMap.set(socket.id, email);
-    io.to(room).emit("user:joined", { email, id: socket.id });
+    socketToRoomMap.set(socket.id, room);
+
+    // Join the room
     socket.join(room);
+
+    // Check if first user in room (host)
+    const roomSize = io.sockets.adapter.rooms.get(room)?.size || 0;
+    if (roomSize === 1) {
+      roomHosts.set(room, socket.id);
+      socket.emit("host:status", { isHost: true });
+    } else {
+      socket.emit("host:status", { isHost: false });
+    }
+
+    // Notify others and confirm join
+    io.to(room).emit("user:joined", { email, id: socket.id });
     io.to(socket.id).emit("room:join", data);
   });
 
+    socket.on("message:send", ({ room, message, email }) => {
+      console.log(`Message from ${email} in ${room}: ${message}`);
 
-
-  socket.on("message:send", ({ room, message, email }) => {
-    console.log(`Message from ${email} in ${room}: ${message}`);
-
- 
-    io.to(room).emit("message:receive", { email, message });
-  });
-  socket.on('transcript:send', ({ room, transcript, email }) => {
-    io.to(room).emit('transcript:receive', { email, transcript });
-  })
-
+      io.to(room).emit("message:receive", { email, message });
+    });
+    socket.on("transcript:send", ({ room, transcript, email }) => {
+      io.to(room).emit("transcript:receive", { email, transcript });
+    });
 
   socket.on("disconnect", () => {
     console.log(`User Disconnected: ${socket.id}`);
     const email = socketidToEmailMap.get(socket.id);
-    if (email) {
-      emailToSocketIdMap.delete(email);
-      socketidToEmailMap.delete(socket.id);
+    const room = socketToRoomMap.get(socket.id);
+
+    // Cleanup mappings
+    if (email) emailToSocketIdMap.delete(email);
+    socketidToEmailMap.delete(socket.id);
+    socketToRoomMap.delete(socket.id);
+
+    // Check if disconnecting user was a host
+    if (room && roomHosts.get(room) === socket.id) {
+      console.log(`Host left room: ${room}, ending meeting`);
+
+      // Notify all participants
+      io.to(room).emit("call:ended", {
+        message: "Host has ended the meeting",
+      });
+
+      // Cleanup room
+      io.in(room).socketsLeave(room);
+      roomHosts.delete(room);
     }
-    // Check if this user was the call initiator
-    let roomToClose = null;
-    for (let [room, initiator] of roomInitiators.entries()) {
-      if (initiator === socket.id) {
-        roomToClose = room;
-        break;
-      }
-    }
-      if (roomToClose) {
-        io.to(roomToClose).emit("call:ended", {
-          message: "Call ended as the host left.",
-        });
-        io.in(roomToClose).socketsLeave(roomToClose); // Disconnect all users
-        roomInitiators.delete(roomToClose); // Remove the room tracking
-      }
   });
 
-  socket.on("user:call", ({ to, offer ,room}) => {
-    io.to(to).emit("incomming:call", { from: socket.id, offer });
-    // Store initiator of the call for that room
-    if (!roomInitiators.has(room)) {
-      roomInitiators.set(room, socket.id);
+  socket.on("meeting:end", (data) => {
+    const room = data.room;
+    if (roomHosts.get(room) === socket.id) {
+      console.log(`Host ending meeting for room: ${room}`);
+
+      // Notify all participants
+      io.to(room).emit("call:ended", {
+        message: "Host has ended the meeting",
+      });
+
+      // Cleanup room
+      io.in(room).socketsLeave(room);
+      roomHosts.delete(room);
     }
+  });
+
+  // WebRTC signaling handlers
+  socket.on("user:call", ({ to, offer }) => {
+    io.to(to).emit("incomming:call", { from: socket.id, offer });
   });
 
   socket.on("call:accepted", ({ to, ans }) => {
@@ -96,16 +125,13 @@ io.on("connection", (socket) => {
   });
 
   socket.on("peer:nego:needed", ({ to, offer }) => {
-    console.log("peer:nego:needed", offer);
     io.to(to).emit("peer:nego:needed", { from: socket.id, offer });
   });
 
   socket.on("peer:nego:done", ({ to, ans }) => {
-    console.log("peer:nego:done", ans);
     io.to(to).emit("peer:nego:final", { from: socket.id, ans });
   });
 });
-
 // MongoDB connection
 mongoose
   .connect(db)
@@ -120,7 +146,6 @@ mongoose
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-let candidateEmail = "anjalihai123@gmail.com"
 
 // Generate PDF
 async function createPDF(evaluations, finalDecision, candidateEmail) {
@@ -264,6 +289,44 @@ app.post("/api/job-post",async (req,res)=>{
   }
 
 })
+
+app.post("/api/job-apply",async(req,res)=>{
+  try{
+    const { name, email, phone, resumeLink, jobId } = req.body;
+    console.log("------", name, email, phone, resumeLink, jobId);
+    const job = await jobDetails.findById(jobId);
+    console.log("jobb",job)
+    if(!job) return res.status(404).json({message:"Job not found"});
+    const candidate = new Candidate({
+      name,
+      email,
+      phone,
+      resumeLink,
+      appliedJob: jobId,
+    });
+    await candidate.save();
+    job.candidate.push(candidate._id);
+    await job.save();
+
+    res.status(201).json({message:"Application submitted successfully",candidate});
+  }catch(error){
+    res.status(500).json({message:error.message});
+  }
+})
+
+app.get("/api/job/:jobId/candidates", async (req, res) => {
+  try {
+    const job = await jobDetails
+      .findById(req.params.jobId)
+      .populate("candidate");
+    if (!job) return res.status(404).json({ message: "Job not found" });
+
+    res.json(job.candidate);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 app.get("/api/job-list",async (req,res)=>{
   try{
     const jobs = await jobDetails.find();
