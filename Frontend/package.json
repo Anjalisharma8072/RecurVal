@@ -33,6 +33,7 @@
     "regenerator-runtime": "^0.14.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "tsconfig-paths": "^4.2.0",
     "webrtc-adapter": "^9.0.1"
   },
   "devDependencies": {

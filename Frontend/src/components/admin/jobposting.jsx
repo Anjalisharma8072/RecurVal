@@ -13,6 +13,8 @@ import {
   Edit,
   ExternalLink,
 } from "lucide-react";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL; 
+
 const JobPortal = () => {
   const [jobs, setJobs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -64,7 +66,7 @@ const JobPortal = () => {
     };
     setShowForm(false);
     try {
-      const response = await fetch("http://localhost:8080/api/job-post", {
+      const response = await fetch(`${API_BASE_URL}/api/job-post`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newJob),
@@ -84,7 +86,7 @@ const JobPortal = () => {
   useEffect(() => {
     const getJobs = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/job-list", {
+        const response = await fetch(`${API_BASE_URL}/api/job-list`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });
@@ -102,7 +104,7 @@ const JobPortal = () => {
         if (!expandedJobId) return;
         try {
           const response = await fetch(
-            `http://localhost:8080/api/job/${expandedJobId}/candidates`
+            `${API_BASE_URL}/api/job/${expandedJobId}/candidates`
           );
           const data = await response.json();
           setCandidates((prev) => ({

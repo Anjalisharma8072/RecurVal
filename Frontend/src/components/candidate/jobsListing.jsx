@@ -1,8 +1,10 @@
 import { MapPin, DollarSign, Book, Code, ExternalLink, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import PropTypes from "prop-types";
-
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL; 
+console.log("--", API_BASE_URL);
 const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId }) => {
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -31,7 +33,7 @@ const ApplicationModal = ({ isOpen, onClose, jobTitle, jobId }) => {
     });
 
     try {
-      const response = await fetch("http://localhost:8080/api/job-apply", {
+      const response = await fetch(`${API_BASE_URL}/api/job-apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -160,7 +162,7 @@ const JobListings = () => {
   useEffect(() => {
     const getjobs = async () => {
       try {
-        const response = await fetch("http://localhost:8080/api/job-list", {
+        const response = await fetch(`${API_BASE_URL}/api/job-list`, {
           method: "GET",
           headers: { "Content-Type": "application/json" },
         });

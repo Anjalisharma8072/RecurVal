@@ -10,8 +10,9 @@ import { useLocation, useNavigate } from "react-router-dom";
 import debounce from "lodash/debounce";
 
 
-
 const RoomPage = () => {
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL; 
+
   const socket = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
@@ -78,7 +79,7 @@ const RoomPage = () => {
 
   const evaluateCandidate = async (messages) => {
     try {
-      const response = await fetch("http://localhost:8080/evaluate", {
+      const response = await fetch(`${API_BASE_URL}/evaluate`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
