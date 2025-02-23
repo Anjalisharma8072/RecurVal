@@ -1,7 +1,7 @@
 import  { useEffect, useCallback, useState,useRef } from "react";
 import ReactPlayer from "react-player";
 import peer from "../../services/peer";
-import { useSocket } from "../../contexts/socketProvider";
+import { useSocket } from "@/contexts/socketProvider";
 import { Mic, MicOff } from "lucide-react";
 import SpeechRecognition, {
   useSpeechRecognition,
