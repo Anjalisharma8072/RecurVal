@@ -31,7 +31,7 @@ const ScorePage = () => {
 
     setIsLoading(true);
     try {
-      const response = await fetch("http://localhost:8000/send-report", {
+      const response = await fetch("http://localhost:8080/send-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

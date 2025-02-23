@@ -4,7 +4,6 @@ import Register from "./components/auth/register/register";
 
 import Header from "./components/header/header";
 import Home from "./components/home";
-import CandidateProfile from "./components/candidate/profile";
 import { AuthProvider } from "./contexts/authContext";
 import { useRoutes } from "react-router-dom";
 import LobbyScreen  from "./components/meeting-room/Lobby";
@@ -41,10 +40,6 @@ function App() {
       element: <RoomPage />,
     },
 
-    {
-      path: "/profile",
-      element: <CandidateProfile />,
-    },
     {
       path: "/jobs",
       element: <JobListings />,

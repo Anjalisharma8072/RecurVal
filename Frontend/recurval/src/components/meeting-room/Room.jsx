@@ -15,7 +15,7 @@ const RoomPage = () => {
   const socket = useSocket();
   const location = useLocation();
   const navigate = useNavigate();
-  const { email, room } = location.state || {}; 
+  const { email, room } = location.state || {};
   const [remoteSocketId, setRemoteSocketId] = useState(null);
   const [myStream, setMyStream] = useState();
   const [remoteStream, setRemoteStream] = useState();
@@ -24,33 +24,35 @@ const RoomPage = () => {
   const [messages, setMessages] = useState([]);
   const [accumulatedTranscript, setAccumulatedTranscript] = useState("");
   const [evaluationResult, setEvaluationResult] = useState(null);
-  const previousTranscriptRef =  useRef("");
+  const [isHost, setIsHost] = useState(false);
+  const[candidateEmail,setCandidateEmail] = useState(null);
+  const previousTranscriptRef = useRef("");
 
-
-  const {
-    transcript,
-    resetTranscript,
-    browserSupportsSpeechRecognition,
-  } = useSpeechRecognition();
+  const { transcript, resetTranscript, browserSupportsSpeechRecognition } =
+    useSpeechRecognition();
 
   const toggleMic = () => {
     if (!isMicOn) {
       SpeechRecognition.startListening({ continuous: true });
       setIsMicOn(true);
     } else {
-      SpeechRecognition.stopListening();  
+      SpeechRecognition.stopListening();
       setIsMicOn(false);
-      if(accumulatedTranscript) {
-      socket.emit("message:send",{room, message:accumulatedTranscript, email});
-      setAccumulatedTranscript("");
+      if (accumulatedTranscript) {
+        socket.emit("message:send", {
+          room,
+          message: accumulatedTranscript,
+          email,
+        });
+        setAccumulatedTranscript("");
       }
       resetTranscript();
-      previousTranscriptRef.current="";
+      previousTranscriptRef.current = "";
     }
   };
 
-  const handleEndMeeting =async ()=>{
-    console.log("Meeting Ended");
+  const handleEndMeeting = async () => {
+    console.log("host Meeting Ended");
     messages.forEach((msg) => {
       console.log(`${msg.email}: ${msg.content}`);
     });
@@ -62,38 +64,39 @@ const RoomPage = () => {
       remoteStream.getTracks().forEach((track) => track.stop());
     }
 
-    socket.emit("meeting:end",{room});
-
+    socket.emit("meeting:end", { room });
 
     const evaulation = await evaluateCandidate(messages);
     setEvaluationResult(evaulation);
-
+    console.log('----',email);
+    
     // Redirect to meeting entry URL
-     navigate("/score", {
-       state: { evaluationResult: evaulation, candidateEmail: email },
-     });
-  }
+    navigate("/score", {
+      state: { evaluationResult: evaulation, candidateEmail: candidateEmail },
+    });
+  };
 
-  const evaluateCandidate = async(messages)=>{
-    try{
-      const response = await fetch("http://localhost:8000/evaluate",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
+  const evaluateCandidate = async (messages) => {
+    try {
+      const response = await fetch("http://localhost:8080/evaluate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-        body:JSON.stringify({messages})
+        body: JSON.stringify({ messages }),
       });
       const result = await response.json();
       console.log("AI Responsee:", JSON.stringify(result, null, 2));
       return result;
-    }catch(error){
+    } catch (error) {
       console.error("Error:", error);
       return null;
     }
-  }
-  
+  };
+
   const handleUserJoined = useCallback(({ email, id }) => {
     console.log(`Email ${email} joined room`);
+    setCandidateEmail(email);
     setRemoteSocketId(id);
   }, []);
 
@@ -168,6 +171,19 @@ const RoomPage = () => {
       setRemoteStream(remoteStream[0]);
     });
   }, []);
+  // Handle meeting end from server
+  useEffect(() => {
+    const handleMeetingEnd = () => {
+      console.log("Meeting ended by host");
+      if (myStream) myStream.getTracks().forEach((track) => track.stop());
+      if (remoteStream)
+        remoteStream.getTracks().forEach((track) => track.stop());
+      navigate("/meeting-room", { state: { meetingEnded: true } });
+    };
+
+    socket.on("call:ended", handleMeetingEnd);
+    return () => socket.off("call:ended", handleMeetingEnd);
+  }, [socket, navigate, myStream, remoteStream]);
 
   useEffect(() => {
     socket.on("user:joined", handleUserJoined);
@@ -175,6 +191,7 @@ const RoomPage = () => {
     socket.on("call:accepted", handleCallAccepted);
     socket.on("peer:nego:needed", handleNegoNeedIncomming);
     socket.on("peer:nego:final", handleNegoNeedFinal);
+    socket.on("host:status", ({ isHost }) => setIsHost(isHost)); // Listen for host status
 
     return () => {
       socket.off("user:joined", handleUserJoined);
@@ -182,6 +199,7 @@ const RoomPage = () => {
       socket.off("call:accepted", handleCallAccepted);
       socket.off("peer:nego:needed", handleNegoNeedIncomming);
       socket.off("peer:nego:final", handleNegoNeedFinal);
+       socket.off("host:status");
     };
   }, [
     socket,
@@ -192,52 +210,50 @@ const RoomPage = () => {
     handleNegoNeedFinal,
   ]);
 
-     useEffect(() => {
-       if (room && email) {
-         console.log(`Joining room: ${room} as ${email}`);
-         socket.emit("join-room", { room, email });
-       }
+  useEffect(() => {
+    if (room && email) {
+      console.log(`Joining room: ${room} as ${email}`);
+      socket.emit("join-room", { room, email });
+    }
 
-       const handleMessageReceive = ({ email, message }) => {
-         console.log(`Received message from ${email}: ${message}`); 
-         setMessages((prev) => [...prev, { email, content: message }]);
-       };
+    const handleMessageReceive = ({ email, message }) => {
+      console.log(`Received message from ${email}: ${message}`);
+      setMessages((prev) => [...prev, { email, content: message }]);
+    };
 
-       socket.on("message:receive", handleMessageReceive);
+    socket.on("message:receive", handleMessageReceive);
 
-       return () => {
-         socket.off("message:receive", handleMessageReceive);
-       };
-     }, [room, email]);
+    return () => {
+      socket.off("message:receive", handleMessageReceive);
+    };
+  }, [room, email]);
 
-     const debouncedTranscriptUpdate = useCallback(
-       debounce((newTranscript) => {
-         setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
-         previousTranscriptRef.current = transcript;
-       }, 500),
-       []
-     );
+  const debouncedTranscriptUpdate = useCallback(
+    debounce((newTranscript) => {
+      setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
+      previousTranscriptRef.current = transcript;
+    }, 500),
+    []
+  );
 
-      useEffect(() => {
-        if (transcript) {
-          const newTranscript = transcript
-            .replace(previousTranscriptRef.current, "")
-            .trim();
-          if (newTranscript) {
-            debouncedTranscriptUpdate(newTranscript);
-          }
-        }
-      }, [transcript, debouncedTranscriptUpdate]);
+  useEffect(() => {
+    if (transcript) {
+      const newTranscript = transcript
+        .replace(previousTranscriptRef.current, "")
+        .trim();
+      if (newTranscript) {
+        debouncedTranscriptUpdate(newTranscript);
+      }
+    }
+  }, [transcript, debouncedTranscriptUpdate]);
 
-    //  const sendMessage = () => {
-    //    if (message.trim()) {
-    //      console.log(`Sending message: ${message} to room: ${room}`); 
-    //      socket.emit("message:send", { room, message:transcript, email });
-    //      setMessage(""); 
-    //    }
-    //  };
-
-    
+  //  const sendMessage = () => {
+  //    if (message.trim()) {
+  //      console.log(`Sending message: ${message} to room: ${room}`);
+  //      socket.emit("message:send", { room, message:transcript, email });
+  //      setMessage("");
+  //    }
+  //  };
 
   if (!browserSupportsSpeechRecognition) {
     return <div>Browser doesnt support speech recognition.</div>;
