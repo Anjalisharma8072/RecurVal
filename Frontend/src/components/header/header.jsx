@@ -93,12 +93,6 @@ export default function Header() {
                     Interview
                   </button>
                   <button
-                    onClick={() => handleNavigate("/score")}
-                    className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                  >
-                    Score
-                  </button>
-                  <button
                     onClick={() => handleNavigate("/meeting-room")}
                     className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
                   >
@@ -126,12 +120,6 @@ export default function Header() {
 
                 {isProfileDropdownOpen && (
                   <div className="absolute right-0 mt-2 bg-gray-800 text-gray-700 rounded-lg shadow-lg w-48 border border-gray-700">
-                    <button
-                      onClick={() => handleNavigate("/profile")}
-                      className="block w-full text-left px-4 py-2 hover:bg-gray-700 hover:text-white transition duration-300"
-                    >
-                      Profile
-                    </button>
                     <button
                       onClick={handleLogout}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-700 hover:text-white transition duration-300"
@@ -201,12 +189,6 @@ export default function Header() {
                       Interview
                     </button>
                     <button
-                      onClick={() => handleNavigate("/score")}
-                      className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                    >
-                      Score
-                    </button>
-                    <button
                       onClick={() => handleNavigate("/meeting-room")}
                       className="text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
                     >
@@ -221,12 +203,6 @@ export default function Header() {
             <div className="mt-4">
               {currentUser ? (
                 <div className="space-y-3">
-                  <button
-                    onClick={() => handleNavigate("/profile")}
-                    className="w-full text-left text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
-                  >
-                    Profile
-                  </button>
                   <button
                     onClick={handleLogout}
                     className="w-full text-left text-gray-200 hover:text-white px-4 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
