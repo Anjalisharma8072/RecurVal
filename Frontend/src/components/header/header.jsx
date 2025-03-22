@@ -66,10 +66,10 @@ export default function Header() {
                     Jobs
                   </button>
                   <button
-                    onClick={() => handleNavigate("/interview")}
+                    onClick={() => handleNavigate("/schedule-interview")}
                     className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
                   >
-                    Interview
+                    Schedule Interview
                   </button>
                   <button
                     onClick={() => handleNavigate("/meeting-room")}
@@ -162,10 +162,10 @@ export default function Header() {
                       Jobs
                     </button>
                     <button
-                      onClick={() => handleNavigate("/interview")}
+                      onClick={() => handleNavigate("/schedule-interview")}
                       className="text-gray-200 hover:text-white px-3 py-2 rounded-lg transition duration-300 bg-gray-700 hover:bg-gray-600"
                     >
-                      Interview
+                      Schedule Interview
                     </button>
                     <button
                       onClick={() => handleNavigate("/meeting-room")}
@@ -199,7 +199,6 @@ export default function Header() {
               </div>
             )}
 
-            {/* Mobile Profile/Auth Section */}
             <div className="mt-4">
               {currentUser ? (
                 <div className="space-y-3">

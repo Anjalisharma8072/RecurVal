@@ -109,7 +109,7 @@ const LobbyScreen = () => {
                 htmlFor="room"
                 className="block text-xs md:text-sm font-medium text-gray-700 mb-2"
               >
-                Room Identifier
+                Meeting ID
               </label>
               <input
                 type="text"

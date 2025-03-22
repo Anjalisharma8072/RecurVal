@@ -1,7 +1,7 @@
 // import { element } from "prop-types";
 import Login from "./components/auth/login/login";
 import Register from "./components/auth/register/register";
-
+import InterviewScheduler from "./components/admin/interview";
 import Header from "./components/header/header";
 import Home from "./components/home";
 import { AuthProvider } from "./contexts/authContext";
@@ -49,9 +49,13 @@ function App() {
       element: <JobPortal />,
     },
     {
-      path:"/score",
-      element:<ScorePage/>
-    }
+      path: "/score",
+      element: <ScorePage />,
+    },
+    {
+      path: "/schedule-interview",
+      element: <InterviewScheduler/>,
+    },
   ];
   let routesElement = useRoutes(routesArray);
   return (

@@ -11,7 +11,7 @@ import debounce from "lodash/debounce";
 
 
 const RoomPage = () => {
-  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL; 
+  const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 
   const socket = useSocket();
   const location = useLocation();
@@ -26,19 +26,37 @@ const RoomPage = () => {
   const [accumulatedTranscript, setAccumulatedTranscript] = useState("");
   const [evaluationResult, setEvaluationResult] = useState(null);
   const [isHost, setIsHost] = useState(false);
-  const[candidateEmail,setCandidateEmail] = useState(null);
-  const previousTranscriptRef = useRef("");
+  const [candidateEmail, setCandidateEmail] = useState(null);
+  const finalTranscriptRef = useRef("");
+
+  const debounceRef = useRef(
+    debounce((transcript) => {
+      const newText = transcript.slice(finalTranscriptRef.current.length);
+      if (newText.trim()) {
+        setAccumulatedTranscript((prev) => `${prev} ${newText.trim()}`.trim());
+        finalTranscriptRef.current = transcript;
+      }
+    }, 800) // Increased debounce time for better finalization
+  );
 
   const { transcript, resetTranscript, browserSupportsSpeechRecognition } =
     useSpeechRecognition();
 
+ 
   const toggleMic = () => {
     if (!isMicOn) {
-      SpeechRecognition.startListening({ continuous: true });
+      finalTranscriptRef.current = "";
+      SpeechRecognition.startListening({
+        continuous: true,
+        interimResults: false, // Get only final results
+      });
       setIsMicOn(true);
     } else {
       SpeechRecognition.stopListening();
       setIsMicOn(false);
+
+      // Send any remaining text immediately
+      debounceRef.current.flush();
       if (accumulatedTranscript) {
         socket.emit("message:send", {
           room,
@@ -48,10 +66,9 @@ const RoomPage = () => {
         setAccumulatedTranscript("");
       }
       resetTranscript();
-      previousTranscriptRef.current = "";
+      finalTranscriptRef.current = "";
     }
   };
-
   const handleEndMeeting = async () => {
     console.log("host Meeting Ended");
     messages.forEach((msg) => {
@@ -69,8 +86,8 @@ const RoomPage = () => {
 
     const evaulation = await evaluateCandidate(messages);
     setEvaluationResult(evaulation);
-    console.log('----',email);
-    
+    console.log("----", email);
+
     // Redirect to meeting entry URL
     navigate("/score", {
       state: { evaluationResult: evaulation, candidateEmail: candidateEmail },
@@ -200,7 +217,7 @@ const RoomPage = () => {
       socket.off("call:accepted", handleCallAccepted);
       socket.off("peer:nego:needed", handleNegoNeedIncomming);
       socket.off("peer:nego:final", handleNegoNeedFinal);
-       socket.off("host:status");
+      socket.off("host:status");
     };
   }, [
     socket,
@@ -229,24 +246,24 @@ const RoomPage = () => {
     };
   }, [room, email]);
 
-  const debouncedTranscriptUpdate = useCallback(
-    debounce((newTranscript) => {
-      setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
-      previousTranscriptRef.current = transcript;
-    }, 500),
-    []
-  );
+  // const debouncedTranscriptUpdate = useCallback(
+  //   debounce((newTranscript) => {
+  //     setAccumulatedTranscript((prev) => `${prev} ${newTranscript}`);
+  //     previousTranscriptRef.current = transcript;
+  //   }, 500),
+  //   []
+  // );
 
-  useEffect(() => {
-    if (transcript) {
-      const newTranscript = transcript
-        .replace(previousTranscriptRef.current, "")
-        .trim();
-      if (newTranscript) {
-        debouncedTranscriptUpdate(newTranscript);
+    useEffect(() => {
+      if (transcript && transcript !== finalTranscriptRef.current) {
+        debounceRef.current(transcript);
       }
-    }
-  }, [transcript, debouncedTranscriptUpdate]);
+    }, [transcript]);
+
+    // Cleanup debounce
+    useEffect(() => {
+      return () => debounceRef.current.cancel();
+    }, []);
 
   //  const sendMessage = () => {
   //    if (message.trim()) {
@@ -378,7 +395,7 @@ const RoomPage = () => {
                 onClick={sendStreams}
                 className="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95 shadow-md"
               >
-                Share Screen
+                Share Video
               </button>
             )}
             <button

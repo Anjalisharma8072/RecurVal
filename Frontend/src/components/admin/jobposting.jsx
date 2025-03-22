@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL; 
 
+
+
 const JobPortal = () => {
   const [jobs, setJobs] = useState([]);
   const [showForm, setShowForm] = useState(false);
@@ -34,6 +36,8 @@ const JobPortal = () => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
   };
+
+
 
   const handleArrayInputChange = (index, field, value) => {
     setFormData((prev) => {
@@ -406,9 +410,6 @@ return (
                               View Resume <ExternalLink className="w-4 h-4" />
                             </a>
                           </div>
-                          <p className="text-gray-700">
-                            {candidate.experience}
-                          </p>
                         </div>
                       ))}
                     </div>
